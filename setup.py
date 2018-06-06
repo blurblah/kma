@@ -9,7 +9,7 @@ setup(
     author = 'blurblah',
     author_email = 'blurblah@blurblah.net',
     classifiers = [
-        'Development Status :: 3',
+        'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
     ],
