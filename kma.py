@@ -1,17 +1,16 @@
-# initial setup
-# ip => latitude, longitude => x, y value
-# get current / forecast
 
-from xy_converter import Converter
-from ipinfo import IPInfo
-from current import Current
-from forecast import Forecast
-from datetime import datetime, timedelta
+import certifi
+import json
 import pytz
 import urllib3
-import json
-import certifi
+from datetime import datetime, timedelta
 from urllib.parse import unquote
+
+from current import Current
+from exceptions import KMAException
+from forecast import Forecast
+from ipinfo import IPInfo
+from xy_converter import Converter
 
 
 class Weather(object):
@@ -26,7 +25,6 @@ class Weather(object):
             cert_reqs='CERT_REQUIRED',
             ca_certs=certifi.where()
         )
-        self.SERVICE_KEY = 'sample_api_key'
 
     def _calculate_xy_point(self):
         ip_info = IPInfo()
@@ -60,11 +58,18 @@ class Weather(object):
             temp_time = (datetime.strptime(time, self.TIME_FMT)
                          - timedelta(hours=1)).strftime(self.TIME_FMT)
             time_param = temp_time[:2] + '00'
-        body = self._request_api('ForecastGrib', date_param, time_param)['response']['body']
-        return Current(self._find_value(body['items']['item'], 'T1H'),
-                       self._find_value(body['items']['item'], 'REH'),
-                       self._find_value(body['items']['item'], 'SKY'),
-                       self._find_value(body['items']['item'], 'RN1'))
+        response = self._request_api('ForecastGrib', date_param, time_param)['response']
+        header = response['header']
+        if header['resultCode'] == '0000':
+            item_list = response['body']['items']['item']
+            return Current(pytz.timezone('Asia/Seoul')
+                           .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
+                           self._find_current_value(item_list, 'T1H'),
+                           self._find_current_value(item_list, 'REH'),
+                           self._find_current_value(item_list, 'SKY'),
+                           self._find_current_value(item_list, 'RN1'))
+        else:
+            raise KMAException(header['resultCode'], header['resultMsg'])
 
     def get_forecast(self):
         date = self._get_date()
@@ -84,14 +89,26 @@ class Weather(object):
                           - timedelta(days=1)).strftime(self.DATE_FMT)
             time_index = len(self.FORECAST_TIME) - 1
         time_param = self.FORECAST_TIME[time_index]
-        print(self._request_api('ForecastSpaceData', date_param, time_param))
+        response = self._request_api('ForecastSpaceData', date_param, time_param)['response']
+        header = response['header']
+        if header['resultCode'] == '0000':
+            item_list = response['body']['items']['item']
+            return Forecast(pytz.timezone('Asia/Seoul')
+                            .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
+                            self._find_forecast_value(item_list, 'T3H'),
+                            self._find_forecast_value(item_list, 'TMN'),
+                            self._find_forecast_value(item_list, 'TMX'),
+                            self._find_forecast_value(item_list, 'REH'),
+                            self._find_forecast_value(item_list, 'POP'),)
+        else:
+            raise KMAException(header['resultCode'], header['resultMsg'])
 
     def _request_api(self, api, base_date, base_time):
         loc = self._calculate_xy_point()
         # service key is encoded and urllib3 request will be encode parameters again
         r = self.http.request('GET', self.ENDPOINT + '/' + api,
                               fields={
-                                  'ServiceKey': unquote(self.SERVICE_KEY),
+                                  'ServiceKey': unquote(self._api_key),
                                   'base_date': base_date,
                                   'base_time': base_time,
                                   'nx': loc['x'],
@@ -100,17 +117,14 @@ class Weather(object):
                               })
         return json.loads(r.data.decode('utf-8'))
 
-    def _find_value(self, items, category):
-        #return [item for item in items if item['category'] == category]
+    def _find_current_value(self, items, category):
+        return self._find_value(items, category, 'obsrValue')
+
+    def _find_forecast_value(self, items, category):
+        return self._find_value(items, category, 'fcstValue')
+
+    def _find_value(self, items, category, value_name):
         for item in items:
             if item['category'] == category:
-                return item['obsrValue']
+                return item[value_name]
         return None
-
-
-if __name__ == '__main__':
-    w = Weather('api_key')
-    curr = w.get_current()
-    print(curr.temperature, curr.humidity, curr.sky, curr.rain_drop)
-    #print(w.get_date())
-    #print(w.get_time())
