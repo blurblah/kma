@@ -6,11 +6,11 @@ import urllib3
 from datetime import datetime, timedelta
 from urllib.parse import unquote
 
-from current import Current
-from exceptions import KMAException
-from forecast import Forecast
-from ipinfo import IPInfo
-from xy_converter import Converter
+from .current import Current
+from .exceptions import KMAException
+from .forecast import Forecast
+from .ipinfo import IPInfo
+from .xy_converter import Converter
 
 
 class Weather(object):
