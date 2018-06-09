@@ -65,15 +65,13 @@ class Weather(object):
         header = response['header']
         if header['resultCode'] == '0000':
             item_list = response['body']['items']['item']
-            curr = Current(pytz.timezone('Asia/Seoul')
+            log.info('Retrieved current weather information.')
+            return Current(pytz.timezone('Asia/Seoul')
                            .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
                            self._find_current_value(item_list, 'T1H'),
                            self._find_current_value(item_list, 'REH'),
                            self._find_current_value(item_list, 'SKY'),
                            self._find_current_value(item_list, 'RN1'))
-            log.info('[Current] Temperature: {} Humidity: {} Sky: {} Rain drop: {}'
-                     .format(curr.temperature, curr.humidity, curr.sky, curr.rain_drop))
-            return curr
         else:
             log.warning('Error response with code:{} and message:{}'
                         .format(header['resultCode'], header['resultMsg']))
@@ -101,18 +99,14 @@ class Weather(object):
         header = response['header']
         if header['resultCode'] == '0000':
             item_list = response['body']['items']['item']
-            forecast = Forecast(pytz.timezone('Asia/Seoul')
-                                .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
-                                self._find_forecast_value(item_list, 'T3H'),
-                                self._find_forecast_value(item_list, 'TMN'),
-                                self._find_forecast_value(item_list, 'TMX'),
-                                self._find_forecast_value(item_list, 'REH'),
-                                self._find_forecast_value(item_list, 'POP'))
-            log.info('[Forecast] Temperature after 3h: {} Min temperature: {}'
-                     .format(forecast.temperature_3h, forecast.min_temperature) + ' ' +
-                     'Max temperature: {} Humidity: {} Rain probability: {}'
-                     .format(forecast.max_temperature, forecast.humidity, forecast.rain_probability))
-            return forecast
+            log.info('Retrieved weather forecast information.')
+            return Forecast(pytz.timezone('Asia/Seoul')
+                            .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
+                            self._find_forecast_value(item_list, 'T3H'),
+                            self._find_forecast_value(item_list, 'TMN'),
+                            self._find_forecast_value(item_list, 'TMX'),
+                            self._find_forecast_value(item_list, 'REH'),
+                            self._find_forecast_value(item_list, 'POP'))
         else:
             log.warning('Error response with code:{} and message:{}'
                         .format(header['resultCode'], header['resultMsg']))
