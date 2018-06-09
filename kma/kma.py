@@ -1,6 +1,7 @@
 
 import certifi
 import json
+import logging
 import pytz
 import urllib3
 from datetime import datetime, timedelta
@@ -11,6 +12,8 @@ from .exceptions import KMAException
 from .forecast import Forecast
 from .ipinfo import IPInfo
 from .xy_converter import Converter
+
+log = logging.getLogger(__name__)
 
 
 class Weather(object):
@@ -62,13 +65,18 @@ class Weather(object):
         header = response['header']
         if header['resultCode'] == '0000':
             item_list = response['body']['items']['item']
-            return Current(pytz.timezone('Asia/Seoul')
+            curr = Current(pytz.timezone('Asia/Seoul')
                            .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
                            self._find_current_value(item_list, 'T1H'),
                            self._find_current_value(item_list, 'REH'),
                            self._find_current_value(item_list, 'SKY'),
                            self._find_current_value(item_list, 'RN1'))
+            log.info('[Current] Temperature: {} Humidity: {} Sky: {} Rain drop: {}'
+                     .format(curr.temperature, curr.humidity, curr.sky, curr.rain_drop))
+            return curr
         else:
+            log.warning('Error response with code:{} and message:{}'
+                        .format(header['resultCode'], header['resultMsg']))
             raise KMAException(header['resultCode'], header['resultMsg'])
 
     def get_forecast(self):
@@ -93,20 +101,31 @@ class Weather(object):
         header = response['header']
         if header['resultCode'] == '0000':
             item_list = response['body']['items']['item']
-            return Forecast(pytz.timezone('Asia/Seoul')
-                            .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
-                            self._find_forecast_value(item_list, 'T3H'),
-                            self._find_forecast_value(item_list, 'TMN'),
-                            self._find_forecast_value(item_list, 'TMX'),
-                            self._find_forecast_value(item_list, 'REH'),
-                            self._find_forecast_value(item_list, 'POP'),)
+            forecast = Forecast(pytz.timezone('Asia/Seoul')
+                                .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
+                                self._find_forecast_value(item_list, 'T3H'),
+                                self._find_forecast_value(item_list, 'TMN'),
+                                self._find_forecast_value(item_list, 'TMX'),
+                                self._find_forecast_value(item_list, 'REH'),
+                                self._find_forecast_value(item_list, 'POP'))
+            log.info('[Forecast] Temperature after 3h: {} Min temperature: {}'
+                     .format(forecast.temperature_3h, forecast.min_temperature) + ' ' +
+                     'Max temperature: {} Humidity: {} Rain probability: {}'
+                     .format(forecast.max_temperature, forecast.humidity, forecast.rain_probability))
+            return forecast
         else:
+            log.warning('Error response with code:{} and message:{}'
+                        .format(header['resultCode'], header['resultMsg']))
             raise KMAException(header['resultCode'], header['resultMsg'])
 
     def _request_api(self, api, base_date, base_time):
         loc = self._calculate_xy_point()
         # service key is encoded and urllib3 request will be encode parameters again
-        r = self.http.request('GET', self.ENDPOINT + '/' + api,
+        url = self.ENDPOINT + '/' + api
+        log.info('Request url: {}'.format(url))
+        log.info('with base_date: {}, base_time: {}, nx: {}, ny: {}, _type: json'
+                 .format(base_date, base_time, loc['x'], loc['y']))
+        r = self.http.request('GET', url,
                               fields={
                                   'ServiceKey': unquote(self._api_key),
                                   'base_date': base_date,
@@ -115,7 +134,9 @@ class Weather(object):
                                   'ny': loc['y'],
                                   '_type': 'json'
                               })
-        return json.loads(r.data.decode('utf-8'))
+        json_obj = json.loads(r.data.decode('utf-8'))
+        log.debug('Response => ' + json.dumps(json_obj, indent=4))
+        return json_obj
 
     def _find_current_value(self, items, category):
         return self._find_value(items, category, 'obsrValue')

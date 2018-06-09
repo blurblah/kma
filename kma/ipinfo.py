@@ -1,7 +1,10 @@
 
-import json
 import certifi
+import json
+import logging
 import urllib3
+
+log = logging.getLogger(__name__)
 
 
 class IPInfo(object):
@@ -12,7 +15,7 @@ class IPInfo(object):
         )
         r = http.request('GET', 'https://ipinfo.io/json')
         self._ipinfo = json.loads(r.data.decode('utf-8'))
-        print("Retrieved ip information => {}".format(self._ipinfo))
+        log.debug("Retrieved ip information => {}".format(self._ipinfo))
 
     def get_location(self):
         location = self._ipinfo['loc'].split(',')
