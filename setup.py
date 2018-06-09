@@ -3,8 +3,9 @@ from setuptools import setup, find_packages
 
 setup(
     name = 'kma',
-    version = '0.1.3',
+    version = '0.2.0',
     description = 'Current weather and forecast information library for kma.go.kr',
+    long_description=open('README.md').read(),
     url = 'https://github.com/blurblah/kma',
     license='MIT',
     author = 'blurblah',

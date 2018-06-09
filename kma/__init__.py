@@ -7,7 +7,7 @@ from .kma import Weather
 
 __author__ = 'blurblah (blurblah@blurblah.net)'
 __license__ = 'MIT'
-__version__ = '0.1.3'
+__version__ = '0.2.0'
 
 __all__ = (
     'Weather',
