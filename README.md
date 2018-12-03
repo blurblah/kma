@@ -30,3 +30,8 @@ forecast = w.get_forecast()
 
 print('Current temperature: {}'.format(curr.temperature))
 ```
+
+#### Deprecated features
+
+##### 1. Sky status
+No longer supported by Korea Meteorological Administration.

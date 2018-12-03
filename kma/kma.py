@@ -70,7 +70,6 @@ class Weather(object):
                            .localize(datetime.strptime(date_param + time_param, '%Y%m%d%H%M')),
                            self._find_current_value(item_list, 'T1H'),
                            self._find_current_value(item_list, 'REH'),
-                           self._find_current_value(item_list, 'SKY'),
                            self._find_current_value(item_list, 'RN1'))
         else:
             log.warning('Error response with code:{} and message:{}'
